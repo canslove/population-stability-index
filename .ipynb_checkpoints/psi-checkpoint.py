@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 def calculate_psi(expected, actual, buckettype='bins', buckets=10, axis=0):
     '''Calculate the PSI (population stability index) across all variables
@@ -45,10 +46,13 @@ def calculate_psi(expected, actual, buckettype='bins', buckets=10, axis=0):
         elif buckettype == 'quantiles':
             breakpoints = np.stack([np.percentile(expected_array, b) for b in breakpoints])
 
-
-
         expected_percents = np.histogram(expected_array, breakpoints)[0] / len(expected_array)
         actual_percents = np.histogram(actual_array, breakpoints)[0] / len(actual_array)
+        
+        # DKang added
+        df = pd.DataFrame({'Bucket': np.arange(1, buckets+1)})
+        df['Benchmark Percent'] = expected_percents
+        df['Current Percent'] = actual_percents
 
         def sub_psi(e_perc, a_perc):
             '''Calculate the actual PSI value from comparing the values.
@@ -64,7 +68,7 @@ def calculate_psi(expected, actual, buckettype='bins', buckets=10, axis=0):
 
         psi_value = np.sum(sub_psi(expected_percents[i], actual_percents[i]) for i in range(0, len(expected_percents)))
 
-        return(psi_value)
+        return(psi_value, df)
 
     if len(expected.shape) == 1:
         psi_values = np.empty(len(expected.shape))
@@ -73,10 +77,11 @@ def calculate_psi(expected, actual, buckettype='bins', buckets=10, axis=0):
 
     for i in range(0, len(psi_values)):
         if len(psi_values) == 1:
-            psi_values = psi(expected, actual, buckets)
+            psi_values, df = psi(expected, actual, buckets)
         elif axis == 0:
-            psi_values[i] = psi(expected[:,i], actual[:,i], buckets)
+            psi_values[i], df = psi(expected[:,i], actual[:,i], buckets)
         elif axis == 1:
-            psi_values[i] = psi(expected[i,:], actual[i,:], buckets)
+            psi_values[i], df = psi(expected[i,:], actual[i,:], buckets)
 
-    return(psi_values)
+    #return(psi_values)
+    return psi_values, df
